@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: TaskFlow API
+  version: 1.0.0
+  description: API for managing tasks and tracking workflow state.
+servers:
+  - url: https://api.taskflow.example/api/v1
+    description: Production API Server
+tags:
+  - name: Tasks
+    description: Operations related to task management
+
+paths:
+  /tasks:
+    get:
+      operationId: listTasks
+      summary: List tasks
+      description: Retrieve a paginated list of tasks filtered by status.
+      tags:
+        - Tasks
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Filter tasks by current status.
+          schema:
+            type: string
+            enum:
+              - pending
+              - in_progress
+              - completed
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of tasks to return.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+        - name: offset
+          in: query
+          required: false
+          description: Number of tasks to skip before starting collection.
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Successfully retrieved list of tasks.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+    post:
+      operationId: createTask
+      summary: Create a task
+      description: Create a new task in the backlog.
+      tags:
+        - Tasks
+      requestBody:
+        required: true
+        description: Task creation payload.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Task successfully created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+
+  /tasks/{taskId}:
+    get:
+      operationId: getTask
+      summary: Get task by ID
+      description: Retrieve details of a specific task by its unique identifier.
+      tags:
+        - Tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Unique identifier of the task.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Task details retrieved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      operationId: updateTask
+      summary: Update a task
+      description: Partially update properties of an existing task.
+      tags:
+        - Tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Unique identifier of the task.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        description: Fields to update on the task.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Task updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    delete:
+      operationId: deleteTask
+      summary: Delete a task
+      description: Remove a task permanently by its unique identifier.
+      tags:
+        - Tasks
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Unique identifier of the task to delete.
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Task deleted successfully.
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+components:
+  schemas:
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the task.
+        title:
+          type: string
+          description: Title or short summary of the task.
+        description:
+          type: string
+          description: Detailed explanation of the task.
+        status:
+          type: string
+          description: Current lifecycle status of the task.
+          enum:
+            - pending
+            - in_progress
+            - completed
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the task was created.
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          description: Title of the task to create.
+        description:
+          type: string
+          description: Detailed description of the task.
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          description: Updated title of the task.
+        description:
+          type: string
+          description: Updated description of the task.
+        status:
+          type: string
+          description: Updated lifecycle status of the task.
+          enum:
+            - pending
+            - in_progress
+            - completed
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Human-readable error message.
+
+  responses:
+    BadRequestError:
+      description: Invalid request parameters or request payload.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFoundError:
+      description: The requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
