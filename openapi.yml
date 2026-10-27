@@ -6,6 +6,8 @@ info:
 servers:
   - url: https://api.taskflow.example/api/v1
     description: Production API Server
+security:
+  - bearerAuth: []
 tags:
   - name: Tasks
     description: Operations related to task management
@@ -28,15 +30,12 @@ paths:
             enum:
               - pending
               - in_progress
-              - completed
         - name: limit
           in: query
           required: false
           description: Maximum number of tasks to return.
           schema:
-            type: integer
-            minimum: 1
-            maximum: 50
+            type: string
         - name: offset
           in: query
           required: false
@@ -135,26 +134,13 @@ paths:
         '404':
           $ref: '#/components/responses/NotFoundError'
 
-    delete:
-      operationId: deleteTask
-      summary: Delete a task
-      description: Remove a task permanently by its unique identifier.
-      tags:
-        - Tasks
-      parameters:
-        - name: taskId
-          in: path
-          required: true
-          description: Unique identifier of the task to delete.
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Task deleted successfully.
-        '404':
-          $ref: '#/components/responses/NotFoundError'
-
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     Task:
       type: object
@@ -169,9 +155,6 @@ components:
         title:
           type: string
           description: Title or short summary of the task.
-        description:
-          type: string
-          description: Detailed explanation of the task.
         status:
           type: string
           description: Current lifecycle status of the task.
