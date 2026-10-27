@@ -34,6 +34,9 @@ pipeline {
                         fi
                     }
 
+                    # FIX: remove leftovers from earlier builds so stale reports are never shown or archived
+                    rm -f old.yml new.yml body.json response.json
+
                     printf '%s\\n' "Compatibility check started"
                     printf 'PR: %s | Source branch: %s | Target branch: %s\\n' \
                         "${CHANGE_ID:-unknown}" "${CHANGE_BRANCH:-unknown}" "${CHANGE_TARGET:-unknown}"
@@ -44,9 +47,10 @@ pipeline {
                     [ -f openapi.yml ] || fail "openapi.yml is missing from the checked-out PR workspace."
                     [ -s openapi.yml ] || fail "openapi.yml in the checked-out PR workspace is empty."
 
-                    git fetch origin "${CHANGE_TARGET}" ||
+                    # FIX: a plain fetch only sets FETCH_HEAD (no origin/<branch> ref exists in this checkout)
+                    git fetch --no-tags origin "${CHANGE_TARGET}" ||
                         fail "Could not fetch target branch '${CHANGE_TARGET}'."
-                    git show "origin/${CHANGE_TARGET}:openapi.yml" > old.yml ||
+                    git show FETCH_HEAD:openapi.yml > old.yml ||
                         fail "openapi.yml is missing from target branch '${CHANGE_TARGET}'."
                     [ -s old.yml ] ||
                         fail "openapi.yml on target branch '${CHANGE_TARGET}' is empty."
@@ -119,7 +123,8 @@ pipeline {
     post {
         always {
             archiveArtifacts artifacts: 'response.json', allowEmptyArchive: true
-            sh 'rm -f old.yml new.yml body.json'
+            // FIX: also remove response.json after it has been archived
+            sh 'rm -f old.yml new.yml body.json response.json'
         }
     }
 }
